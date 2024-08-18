@@ -1,0 +1,6 @@
+.venv/
+.vscode/
+build/
+CodingRiderImproved/tests/
+CodingRiderImproved.egg-info/
+CodingRiderImproved/**/__pycache__/
