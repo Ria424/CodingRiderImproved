@@ -21,52 +21,52 @@ def run():
     colorama_init()
 
     match args[0]:
-        # python -m CodingRider upgrade
-        # python -m CodingRider update
+        # python -m CodingRiderImproved upgrade
+        # python -m CodingRiderImproved update
         # case "update" | "upgrade":
         #     updater = Updater()
         #     updater.update()
 
         case "request" if count == 4:
             match args[1]:
-                # python -m CodingRider request state 10 0.2
+                # python -m CodingRiderImproved request state 10 0.2
                 # "* State - Ready     Blue    Red     Black   Black   None_             1830   1631   2230      76      "
                 case "state":
                     print("         |ModeSystem   |ModeFlight |ModeControlFlight |ModeMovement |Headless |ControlSpeed |SensorOrientation |Battery |")
                     request(DeviceType.Drone, DataType.State, int(args[2]), float(args[3]))
 
-                # python -m CodingRider request Motion 10 0.2
+                # python -m CodingRiderImproved request Motion 10 0.2
                 # "* Motion      -38      64     -32     457     -40    -400      16       0   20500"
                 case "motion":
                     print("         |Accel                  |Gyro                   |Angle                  |")
                     print("         |      X|      Y|      Z|   Roll|  Pitch|    Yaw|   Roll|  Pitch|    Yaw|")
                     request(DeviceType.Drone, DataType.Motion, int(args[2]), float(args[3]))
 
-        # python -m CodingRider takeoff
+        # python -m CodingRiderImproved takeoff
         case "takeoff":
             print(Fore.YELLOW + "takeoff" + Style.RESET_ALL)
             command(CommandType.FlightEvent, FlightEvent.Takeoff.value)
 
-        # python -m CodingRider landing
+        # python -m CodingRiderImproved landing
         case "landing":
             print(Fore.YELLOW + "landing" + Style.RESET_ALL)
             command(CommandType.FlightEvent, FlightEvent.Landing.value)
 
-        # python -m CodingRider stop
+        # python -m CodingRiderImproved stop
         case "stop":
             print(Fore.YELLOW + "stop" + Style.RESET_ALL)
             command(CommandType.FlightEvent, FlightEvent.Stop.value)
 
         # 조종
         # 지정한 시간이 종료되면 입력값을 모두 0으로 변경하고 멈춤
-        # python -m CodingRider control <roll> <pitch> <yaw> <throttle> <time(ms)>
-        # python -m CodingRider control 40 0 3
+        # python -m CodingRiderImproved control <roll> <pitch> <yaw> <throttle> <time(ms)>
+        # python -m CodingRiderImproved control 40 0 3
         case "control" if count == 6:
             print(Fore.YELLOW + "control" + Style.RESET_ALL)
             control(*map(int, args[1:6]))
 
         # 이동
-        # python -m CodingRider position <x> <y> <z> <velocity> [heading] [rotational velocity]
+        # python -m CodingRiderImproved position <x> <y> <z> <velocity> [heading] [rotational velocity]
         case "position":
             print(Fore.YELLOW + "position" + Style.RESET_ALL)
             match count:
@@ -76,25 +76,25 @@ def run():
                     controlPosition(*map(float, args[1:5]), 0, 0)
 
         # 이동(헤딩)
-        # python -m CodingRider heading [heading] [rotational velocity]
+        # python -m CodingRiderImproved heading [heading] [rotational velocity]
         case "heading" if count == 3:
             print(Fore.YELLOW + "heading" + Style.RESET_ALL)
             controlPosition(0, 0, 0, 0, *map(int, args[1:3]))
 
         # 버저
-        # python -m CodingRider buzzer [hz] [time(ms)]
-        # python -m CodingRider buzzer 400 2000
+        # python -m CodingRiderImproved buzzer [hz] [time(ms)]
+        # python -m CodingRiderImproved buzzer 400 2000
         case "buzzer" if count == 3:
             print(Fore.WHITE + "Buzz Sound: " + Fore.YELLOW + args[1] + Fore.WHITE + "Hz, " + Fore.CYAN + args[2] + Fore.WHITE + "ms" + Style.RESET_ALL)
             buzzer(DeviceType.Controller, *map(int, args[1:3]))
 
-        # python -m CodingRider light body flicker 100 50 50 10
-        # python -m CodingRider light body flickerdouble 100 50 50 10
-        # python -m CodingRider light body dimming 3 50 50 10
-        # python -m CodingRider light body sunrise 5 50 50 10
-        # python -m CodingRider light body sunset 5 50 50 10
-        # python -m CodingRider light body rainbow 8 50 50 10
-        # python -m CodingRider light body rainbow2 8 50 50 10
+        # python -m CodingRiderImproved light body flicker 100 50 50 10
+        # python -m CodingRiderImproved light body flickerdouble 100 50 50 10
+        # python -m CodingRiderImproved light body dimming 3 50 50 10
+        # python -m CodingRiderImproved light body sunrise 5 50 50 10
+        # python -m CodingRiderImproved light body sunset 5 50 50 10
+        # python -m CodingRiderImproved light body rainbow 8 50 50 10
+        # python -m CodingRiderImproved light body rainbow2 8 50 50 10
         case "light" if count == 7:
             print(
                 Fore.WHITE
@@ -199,72 +199,72 @@ def help():
 
     # print()
     # print(Fore.CYAN + "  - Firmware Upgrade" + Style.RESET_ALL)
-    # print(Fore.GREEN + "   > " + Fore.WHITE + "python -m CodingRider " + Fore.CYAN + "upgrade" + Style.RESET_ALL)
+    # print(Fore.GREEN + "   > " + Fore.WHITE + "python -m CodingRiderImproved " + Fore.CYAN + "upgrade" + Style.RESET_ALL)
 
     print()
     print(Fore.CYAN + "  - Request Data" + Style.RESET_ALL)
-    print(Fore.GREEN + "   > " + Fore.WHITE + "python -m CodingRider " + Fore.CYAN + "request " + Fore.WHITE + "[" + Fore.YELLOW + "data type" + Fore.WHITE + "] [" + Fore.GREEN + "number of times" + Fore.WHITE + "] [" + Fore.YELLOW + "time interval(sec)" + Fore.WHITE + "]" + Style.RESET_ALL)
-    print(Fore.GREEN + "   > " + Fore.WHITE + "python -m CodingRider " + Fore.CYAN + "request " + Fore.YELLOW + "state " + Fore.GREEN + "10 " + Fore.YELLOW + "0.2" + Style.RESET_ALL)
-    print(Fore.GREEN + "   > " + Fore.WHITE + "python -m CodingRider " + Fore.CYAN + "request " + Fore.YELLOW + "motion " + Fore.GREEN + "10 " + Fore.YELLOW + "0.2" + Style.RESET_ALL)
+    print(Fore.GREEN + "   > " + Fore.WHITE + "python -m CodingRiderImproved " + Fore.CYAN + "request " + Fore.WHITE + "[" + Fore.YELLOW + "data type" + Fore.WHITE + "] [" + Fore.GREEN + "number of times" + Fore.WHITE + "] [" + Fore.YELLOW + "time interval(sec)" + Fore.WHITE + "]" + Style.RESET_ALL)
+    print(Fore.GREEN + "   > " + Fore.WHITE + "python -m CodingRiderImproved " + Fore.CYAN + "request " + Fore.YELLOW + "state " + Fore.GREEN + "10 " + Fore.YELLOW + "0.2" + Style.RESET_ALL)
+    print(Fore.GREEN + "   > " + Fore.WHITE + "python -m CodingRiderImproved " + Fore.CYAN + "request " + Fore.YELLOW + "motion " + Fore.GREEN + "10 " + Fore.YELLOW + "0.2" + Style.RESET_ALL)
     ## 카드 코딩과 관련된 내용이 최신 버전인지 알 수 없는 관계로 일단 보류(2021.1.4)
-    ##print(Fore.GREEN + "   > " + Fore.WHITE + "python -m CodingRider " + Fore.CYAN + "request " + Fore.YELLOW + "RawCard " + Fore.GREEN + "10 " + Fore.YELLOW + "0.2" + Style.RESET_ALL)
-    ##print(Fore.GREEN + "   > " + Fore.WHITE + "python -m CodingRider " + Fore.CYAN + "request " + Fore.YELLOW + "RawCardRange " + Fore.GREEN + "10 " + Fore.YELLOW + "0.2" + Style.RESET_ALL)
+    ##print(Fore.GREEN + "   > " + Fore.WHITE + "python -m CodingRiderImproved " + Fore.CYAN + "request " + Fore.YELLOW + "RawCard " + Fore.GREEN + "10 " + Fore.YELLOW + "0.2" + Style.RESET_ALL)
+    ##print(Fore.GREEN + "   > " + Fore.WHITE + "python -m CodingRiderImproved " + Fore.CYAN + "request " + Fore.YELLOW + "RawCardRange " + Fore.GREEN + "10 " + Fore.YELLOW + "0.2" + Style.RESET_ALL)
 
     print()
     print(Fore.CYAN + "  - FlightEvent" + Style.RESET_ALL)
-    print(Fore.GREEN + "   > " + Fore.WHITE + "python -m CodingRider " + Fore.WHITE + "[" + Fore.YELLOW + "FlightEvent" + Fore.WHITE + "]" + Style.RESET_ALL)
-    print(Fore.GREEN + "   > " + Fore.WHITE + "python -m CodingRider " + Fore.YELLOW + "takeoff" + Style.RESET_ALL)
-    print(Fore.GREEN + "   > " + Fore.WHITE + "python -m CodingRider " + Fore.YELLOW + "landing" + Style.RESET_ALL)
-    print(Fore.GREEN + "   > " + Fore.WHITE + "python -m CodingRider " + Fore.YELLOW + "stop" + Style.RESET_ALL)
+    print(Fore.GREEN + "   > " + Fore.WHITE + "python -m CodingRiderImproved " + Fore.WHITE + "[" + Fore.YELLOW + "FlightEvent" + Fore.WHITE + "]" + Style.RESET_ALL)
+    print(Fore.GREEN + "   > " + Fore.WHITE + "python -m CodingRiderImproved " + Fore.YELLOW + "takeoff" + Style.RESET_ALL)
+    print(Fore.GREEN + "   > " + Fore.WHITE + "python -m CodingRiderImproved " + Fore.YELLOW + "landing" + Style.RESET_ALL)
+    print(Fore.GREEN + "   > " + Fore.WHITE + "python -m CodingRiderImproved " + Fore.YELLOW + "stop" + Style.RESET_ALL)
 
     print()
     print(Fore.CYAN + "  - Control" + Style.RESET_ALL)
-    print(Fore.GREEN + "   > " + Fore.WHITE + "python -m CodingRider " + Fore.CYAN + "control " + Fore.WHITE + "[" + Fore.RED + "roll" + Fore.WHITE + "] [" + Fore.GREEN + "pitch" + Fore.WHITE + "] [" + Fore.BLUE + "yaw" + Fore.WHITE + "] [" + Fore.MAGENTA + "throttle" + Fore.WHITE + "] [" + Fore.YELLOW + "time(ms)" + Fore.WHITE + "]" + Style.RESET_ALL)
-    print(Fore.GREEN + "   > " + Fore.WHITE + "python -m CodingRider " + Fore.CYAN + "control " + Fore.RED + "0 " + Fore.GREEN + "30 " + Fore.BLUE + "0 " + Fore.MAGENTA + "0 " + Fore.YELLOW + "5000 " + Style.RESET_ALL)
+    print(Fore.GREEN + "   > " + Fore.WHITE + "python -m CodingRiderImproved " + Fore.CYAN + "control " + Fore.WHITE + "[" + Fore.RED + "roll" + Fore.WHITE + "] [" + Fore.GREEN + "pitch" + Fore.WHITE + "] [" + Fore.BLUE + "yaw" + Fore.WHITE + "] [" + Fore.MAGENTA + "throttle" + Fore.WHITE + "] [" + Fore.YELLOW + "time(ms)" + Fore.WHITE + "]" + Style.RESET_ALL)
+    print(Fore.GREEN + "   > " + Fore.WHITE + "python -m CodingRiderImproved " + Fore.CYAN + "control " + Fore.RED + "0 " + Fore.GREEN + "30 " + Fore.BLUE + "0 " + Fore.MAGENTA + "0 " + Fore.YELLOW + "5000 " + Style.RESET_ALL)
 
     print()
     print(Fore.CYAN + "  - Control - Position, Heading" + Style.RESET_ALL)
-    print(Fore.GREEN + "   > " + Fore.WHITE + "python -m CodingRider " + Fore.CYAN + "position " + Fore.WHITE + "[" + Fore.RED + "x(meter)" + Fore.WHITE + "] [" + Fore.GREEN + "y(meter)" + Fore.WHITE + "] [" + Fore.BLUE + "z(meter)" + Fore.WHITE + "] [" + Fore.YELLOW + "speed(m/sec)" + Fore.WHITE + "] [" + Fore.MAGENTA + "heading(degree)" + Fore.WHITE + "] [" + Fore.YELLOW + "rotational velocity(deg/sec)" + Fore.WHITE + "]" + Style.RESET_ALL)
-    print(Fore.GREEN + "   > " + Fore.WHITE + "python -m CodingRider " + Fore.CYAN + "position " + Fore.RED + "5 " + Fore.GREEN + "0 " + Fore.BLUE + "0 "  + Fore.YELLOW + "2 " + Fore.MAGENTA + "90 " + Fore.YELLOW + "45 "+ Style.RESET_ALL)
+    print(Fore.GREEN + "   > " + Fore.WHITE + "python -m CodingRiderImproved " + Fore.CYAN + "position " + Fore.WHITE + "[" + Fore.RED + "x(meter)" + Fore.WHITE + "] [" + Fore.GREEN + "y(meter)" + Fore.WHITE + "] [" + Fore.BLUE + "z(meter)" + Fore.WHITE + "] [" + Fore.YELLOW + "speed(m/sec)" + Fore.WHITE + "] [" + Fore.MAGENTA + "heading(degree)" + Fore.WHITE + "] [" + Fore.YELLOW + "rotational velocity(deg/sec)" + Fore.WHITE + "]" + Style.RESET_ALL)
+    print(Fore.GREEN + "   > " + Fore.WHITE + "python -m CodingRiderImproved " + Fore.CYAN + "position " + Fore.RED + "5 " + Fore.GREEN + "0 " + Fore.BLUE + "0 "  + Fore.YELLOW + "2 " + Fore.MAGENTA + "90 " + Fore.YELLOW + "45 "+ Style.RESET_ALL)
 
     print()
     print(Fore.CYAN + "  - Control - Position" + Style.RESET_ALL)
-    print(Fore.GREEN + "   > " + Fore.WHITE + "python -m CodingRider " + Fore.CYAN + "position " + Fore.WHITE + "[" + Fore.RED + "x(meter)" + Fore.WHITE + "] [" + Fore.GREEN + "y(meter)" + Fore.WHITE + "] [" + Fore.BLUE + "z(meter)" + Fore.WHITE + "] [" + Fore.YELLOW + "speed(m/sec)" + Fore.WHITE + "]" + Style.RESET_ALL)
-    print(Fore.GREEN + "   > " + Fore.WHITE + "python -m CodingRider " + Fore.CYAN + "position " + Fore.RED + "5 " + Fore.GREEN + "0 " + Fore.BLUE + "0 "  + Fore.YELLOW + "2 " + Style.RESET_ALL)
+    print(Fore.GREEN + "   > " + Fore.WHITE + "python -m CodingRiderImproved " + Fore.CYAN + "position " + Fore.WHITE + "[" + Fore.RED + "x(meter)" + Fore.WHITE + "] [" + Fore.GREEN + "y(meter)" + Fore.WHITE + "] [" + Fore.BLUE + "z(meter)" + Fore.WHITE + "] [" + Fore.YELLOW + "speed(m/sec)" + Fore.WHITE + "]" + Style.RESET_ALL)
+    print(Fore.GREEN + "   > " + Fore.WHITE + "python -m CodingRiderImproved " + Fore.CYAN + "position " + Fore.RED + "5 " + Fore.GREEN + "0 " + Fore.BLUE + "0 "  + Fore.YELLOW + "2 " + Style.RESET_ALL)
 
     print()
     print(Fore.CYAN + "  - Control - Heading" + Style.RESET_ALL)
-    print(Fore.GREEN + "   > " + Fore.WHITE + "python -m CodingRider " + Fore.CYAN + "heading " + Fore.WHITE + "[" + Fore.MAGENTA + "heading(degree)" + Fore.WHITE + "] [" + Fore.YELLOW + "rotational velocity(deg/sec)" + Fore.WHITE + "]" + Style.RESET_ALL)
-    print(Fore.GREEN + "   > " + Fore.WHITE + "python -m CodingRider " + Fore.CYAN + "heading " + Fore.MAGENTA + "90 " + Fore.YELLOW + "45" + Style.RESET_ALL)
+    print(Fore.GREEN + "   > " + Fore.WHITE + "python -m CodingRiderImproved " + Fore.CYAN + "heading " + Fore.WHITE + "[" + Fore.MAGENTA + "heading(degree)" + Fore.WHITE + "] [" + Fore.YELLOW + "rotational velocity(deg/sec)" + Fore.WHITE + "]" + Style.RESET_ALL)
+    print(Fore.GREEN + "   > " + Fore.WHITE + "python -m CodingRiderImproved " + Fore.CYAN + "heading " + Fore.MAGENTA + "90 " + Fore.YELLOW + "45" + Style.RESET_ALL)
 
     print()
     print(Fore.CYAN + "  - Buzzer" + Style.RESET_ALL)
-    print(Fore.GREEN + "   > " + Fore.WHITE + "python -m CodingRider " + Fore.CYAN + "buzzer " + Fore.WHITE + "[" + Fore.YELLOW + "hz" + Fore.WHITE + "] [" + Fore.GREEN + "time(ms)" + Fore.WHITE + "]" + Style.RESET_ALL)
-    print(Fore.GREEN + "   > " + Fore.WHITE + "python -m CodingRider " + Fore.CYAN + "buzzer " + Fore.YELLOW + "400 " + Fore.GREEN + "2000" + Style.RESET_ALL)
+    print(Fore.GREEN + "   > " + Fore.WHITE + "python -m CodingRiderImproved " + Fore.CYAN + "buzzer " + Fore.WHITE + "[" + Fore.YELLOW + "hz" + Fore.WHITE + "] [" + Fore.GREEN + "time(ms)" + Fore.WHITE + "]" + Style.RESET_ALL)
+    print(Fore.GREEN + "   > " + Fore.WHITE + "python -m CodingRiderImproved " + Fore.CYAN + "buzzer " + Fore.YELLOW + "400 " + Fore.GREEN + "2000" + Style.RESET_ALL)
 
     print()
     print(Fore.CYAN + "  - Vibrator" + Style.RESET_ALL)
-    print(Fore.GREEN + "   > " + Fore.WHITE + "python -m CodingRider " + Fore.CYAN + "vibrator " + Fore.WHITE + "[" + Fore.YELLOW + "on(ms)" + Fore.WHITE + "] [" + Fore.GREEN + "off(ms)" + Fore.WHITE + "] [" + Fore.YELLOW + "total(ms)" + Fore.WHITE + "]" + Style.RESET_ALL)
-    print(Fore.GREEN + "   > " + Fore.WHITE + "python -m CodingRider " + Fore.CYAN + "vibrator " + Fore.YELLOW + "500 " + Fore.GREEN + "500 " + Fore.YELLOW + "2000" + Style.RESET_ALL)
+    print(Fore.GREEN + "   > " + Fore.WHITE + "python -m CodingRiderImproved " + Fore.CYAN + "vibrator " + Fore.WHITE + "[" + Fore.YELLOW + "on(ms)" + Fore.WHITE + "] [" + Fore.GREEN + "off(ms)" + Fore.WHITE + "] [" + Fore.YELLOW + "total(ms)" + Fore.WHITE + "]" + Style.RESET_ALL)
+    print(Fore.GREEN + "   > " + Fore.WHITE + "python -m CodingRiderImproved " + Fore.CYAN + "vibrator " + Fore.YELLOW + "500 " + Fore.GREEN + "500 " + Fore.YELLOW + "2000" + Style.RESET_ALL)
 
     print()
     print(Fore.CYAN + "  - Light single" + Style.RESET_ALL)
-    print(Fore.GREEN + "   > " + Fore.WHITE + "python -m CodingRider " + Fore.CYAN + "light " + Fore.WHITE + "[" + Fore.MAGENTA + "part" + Fore.WHITE + "] [" + Fore.CYAN + "mode" + Fore.WHITE + "] [" + Fore.YELLOW + "interval" + Fore.WHITE + "]" + Style.RESET_ALL)
-    print(Fore.GREEN + "   > " + Fore.WHITE + "python -m CodingRider " + Fore.CYAN + "light " + Fore.MAGENTA + "rear " + Fore.CYAN + "hold " + Fore.YELLOW + "100" + Style.RESET_ALL)
-    print(Fore.GREEN + "   > " + Fore.WHITE + "python -m CodingRider " + Fore.CYAN + "light " + Fore.MAGENTA + "a " + Fore.CYAN + "hold " + Fore.YELLOW + "100" + Style.RESET_ALL)
-    print(Fore.GREEN + "   > " + Fore.WHITE + "python -m CodingRider " + Fore.CYAN + "light " + Fore.MAGENTA + "b " + Fore.CYAN + "hold " + Fore.YELLOW + "100" + Style.RESET_ALL)
+    print(Fore.GREEN + "   > " + Fore.WHITE + "python -m CodingRiderImproved " + Fore.CYAN + "light " + Fore.WHITE + "[" + Fore.MAGENTA + "part" + Fore.WHITE + "] [" + Fore.CYAN + "mode" + Fore.WHITE + "] [" + Fore.YELLOW + "interval" + Fore.WHITE + "]" + Style.RESET_ALL)
+    print(Fore.GREEN + "   > " + Fore.WHITE + "python -m CodingRiderImproved " + Fore.CYAN + "light " + Fore.MAGENTA + "rear " + Fore.CYAN + "hold " + Fore.YELLOW + "100" + Style.RESET_ALL)
+    print(Fore.GREEN + "   > " + Fore.WHITE + "python -m CodingRiderImproved " + Fore.CYAN + "light " + Fore.MAGENTA + "a " + Fore.CYAN + "hold " + Fore.YELLOW + "100" + Style.RESET_ALL)
+    print(Fore.GREEN + "   > " + Fore.WHITE + "python -m CodingRiderImproved " + Fore.CYAN + "light " + Fore.MAGENTA + "b " + Fore.CYAN + "hold " + Fore.YELLOW + "100" + Style.RESET_ALL)
 
     print()
     print(Fore.CYAN + "  - Light RGB" + Style.RESET_ALL)
-    print(Fore.GREEN + "   > " + Fore.WHITE + "python -m CodingRider " + Fore.CYAN + "light " + Fore.WHITE + "[" + Fore.MAGENTA + "part" + Fore.WHITE + "] [" + Fore.CYAN + "mode" + Fore.WHITE + "] [" + Fore.YELLOW + "interval" + Fore.WHITE + "] [" + Fore.RED + "R" + Fore.WHITE + "] [" + Fore.GREEN + "G" + Fore.WHITE + "] [" + Fore.BLUE + "B" + Fore.WHITE + "] " + Style.RESET_ALL)
-    print(Fore.GREEN + "   > " + Fore.WHITE + "python -m CodingRider " + Fore.CYAN + "light " + Fore.MAGENTA + "body " + Fore.CYAN + "hold " + Fore.YELLOW + "100 " + Fore.RED + "50 " + Fore.GREEN + "50 " + Fore.BLUE + "10" + Style.RESET_ALL)
-    print(Fore.GREEN + "   > " + Fore.WHITE + "python -m CodingRider " + Fore.CYAN + "light " + Fore.MAGENTA + "body " + Fore.CYAN + "flicker " + Fore.YELLOW + "100 " + Fore.RED + "50 " + Fore.GREEN + "50 " + Fore.BLUE + "10" + Style.RESET_ALL)
-    print(Fore.GREEN + "   > " + Fore.WHITE + "python -m CodingRider " + Fore.CYAN + "light " + Fore.MAGENTA + "body " + Fore.CYAN + "flickerdouble " + Fore.YELLOW + "100 " + Fore.RED + "50 " + Fore.GREEN + "50 " + Fore.BLUE + "10" + Style.RESET_ALL)
-    print(Fore.GREEN + "   > " + Fore.WHITE + "python -m CodingRider " + Fore.CYAN + "light " + Fore.MAGENTA + "body " + Fore.CYAN + "dimming " + Fore.YELLOW + "3 " + Fore.RED + "50 " + Fore.GREEN + "50 " + Fore.BLUE + "10" + Style.RESET_ALL)
-    print(Fore.GREEN + "   > " + Fore.WHITE + "python -m CodingRider " + Fore.CYAN + "light " + Fore.MAGENTA + "body " + Fore.CYAN + "sunrise " + Fore.YELLOW + "5 " + Fore.RED + "50 " + Fore.GREEN + "50 " + Fore.BLUE + "10" + Style.RESET_ALL)
-    print(Fore.GREEN + "   > " + Fore.WHITE + "python -m CodingRider " + Fore.CYAN + "light " + Fore.MAGENTA + "body " + Fore.CYAN + "sunset " + Fore.YELLOW + "5 " + Fore.RED + "50 " + Fore.GREEN + "50 " + Fore.BLUE + "10" + Style.RESET_ALL)
-    print(Fore.GREEN + "   > " + Fore.WHITE + "python -m CodingRider " + Fore.CYAN + "light " + Fore.MAGENTA + "body " + Fore.CYAN + "rainbow " + Fore.YELLOW + "8 " + Fore.RED + "50 " + Fore.GREEN + "50 " + Fore.BLUE + "10" + Style.RESET_ALL)
-    print(Fore.GREEN + "   > " + Fore.WHITE + "python -m CodingRider " + Fore.CYAN + "light " + Fore.MAGENTA + "body " + Fore.CYAN + "rainbow2 " + Fore.YELLOW + "8 " + Fore.RED + "50 " + Fore.GREEN + "50 " + Fore.BLUE + "10" + Style.RESET_ALL)
+    print(Fore.GREEN + "   > " + Fore.WHITE + "python -m CodingRiderImproved " + Fore.CYAN + "light " + Fore.WHITE + "[" + Fore.MAGENTA + "part" + Fore.WHITE + "] [" + Fore.CYAN + "mode" + Fore.WHITE + "] [" + Fore.YELLOW + "interval" + Fore.WHITE + "] [" + Fore.RED + "R" + Fore.WHITE + "] [" + Fore.GREEN + "G" + Fore.WHITE + "] [" + Fore.BLUE + "B" + Fore.WHITE + "] " + Style.RESET_ALL)
+    print(Fore.GREEN + "   > " + Fore.WHITE + "python -m CodingRiderImproved " + Fore.CYAN + "light " + Fore.MAGENTA + "body " + Fore.CYAN + "hold " + Fore.YELLOW + "100 " + Fore.RED + "50 " + Fore.GREEN + "50 " + Fore.BLUE + "10" + Style.RESET_ALL)
+    print(Fore.GREEN + "   > " + Fore.WHITE + "python -m CodingRiderImproved " + Fore.CYAN + "light " + Fore.MAGENTA + "body " + Fore.CYAN + "flicker " + Fore.YELLOW + "100 " + Fore.RED + "50 " + Fore.GREEN + "50 " + Fore.BLUE + "10" + Style.RESET_ALL)
+    print(Fore.GREEN + "   > " + Fore.WHITE + "python -m CodingRiderImproved " + Fore.CYAN + "light " + Fore.MAGENTA + "body " + Fore.CYAN + "flickerdouble " + Fore.YELLOW + "100 " + Fore.RED + "50 " + Fore.GREEN + "50 " + Fore.BLUE + "10" + Style.RESET_ALL)
+    print(Fore.GREEN + "   > " + Fore.WHITE + "python -m CodingRiderImproved " + Fore.CYAN + "light " + Fore.MAGENTA + "body " + Fore.CYAN + "dimming " + Fore.YELLOW + "3 " + Fore.RED + "50 " + Fore.GREEN + "50 " + Fore.BLUE + "10" + Style.RESET_ALL)
+    print(Fore.GREEN + "   > " + Fore.WHITE + "python -m CodingRiderImproved " + Fore.CYAN + "light " + Fore.MAGENTA + "body " + Fore.CYAN + "sunrise " + Fore.YELLOW + "5 " + Fore.RED + "50 " + Fore.GREEN + "50 " + Fore.BLUE + "10" + Style.RESET_ALL)
+    print(Fore.GREEN + "   > " + Fore.WHITE + "python -m CodingRiderImproved " + Fore.CYAN + "light " + Fore.MAGENTA + "body " + Fore.CYAN + "sunset " + Fore.YELLOW + "5 " + Fore.RED + "50 " + Fore.GREEN + "50 " + Fore.BLUE + "10" + Style.RESET_ALL)
+    print(Fore.GREEN + "   > " + Fore.WHITE + "python -m CodingRiderImproved " + Fore.CYAN + "light " + Fore.MAGENTA + "body " + Fore.CYAN + "rainbow " + Fore.YELLOW + "8 " + Fore.RED + "50 " + Fore.GREEN + "50 " + Fore.BLUE + "10" + Style.RESET_ALL)
+    print(Fore.GREEN + "   > " + Fore.WHITE + "python -m CodingRiderImproved " + Fore.CYAN + "light " + Fore.MAGENTA + "body " + Fore.CYAN + "rainbow2 " + Fore.YELLOW + "8 " + Fore.RED + "50 " + Fore.GREEN + "50 " + Fore.BLUE + "10" + Style.RESET_ALL)
     print()
 
 def eventState(state: State):
