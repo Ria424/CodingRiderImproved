@@ -1,5 +1,7 @@
+from os import linesep
 from queue import Queue
 from struct import pack
+from sys import stdout
 from threading import Thread
 from time import perf_counter, sleep, time
 from typing import Any, Callable, Literal
@@ -12,7 +14,6 @@ from .crc import crc16
 from .protocol import *
 from .receiver import Receiver, StateLoading
 from .system import FlightEvent
-from .util import print_flush, print_newline, println
 
 def bytearray_to_string(data_array: bytes | bytearray) -> str:
     string = ""
@@ -299,35 +300,40 @@ class Drone:
             self, data_type: DataType, event_handler: Callable[[Any], None]):
         self._event_handler[data_type] = event_handler
 
-    def _print_log_basic(self, prefix: str, message: Any):
+    def _print_log_base(self, prefix: str, message: Any):
         if message is not None:
-            println(
-                f"{prefix}[{time() - self.initialized_time:10.03f}] {message}{Style.RESET_ALL}"
+            stdout.write(
+                f"{prefix}[{time() - self.initialized_time:10.03f}] {message}"
+                f"{Style.RESET_ALL}{linesep}"
             )
 
     def _print_log(self, message: Any):
         if self._flag_show_log_message:
-            self._print_log_basic(Fore.GREEN, message)
+            self._print_log_base(Fore.GREEN, message)
 
     def _print_error(self, message: Any):
         if self._flag_show_error_message:
-            self._print_log_basic(Fore.RED, message)
+            self._print_log_base(Fore.RED, message)
 
     def _print_transfer_data(self, data: bytearray | bytes | None):
-        if self._flag_show_transfer_data and data is not None and len(data) > 0:
-            println(
-                f"{Back.YELLOW}{Fore.BLACK}{bytearray_to_string(data)}{Style.RESET_ALL}"
+        if self._flag_show_transfer_data \
+            and data is not None and len(data) > 0:
+            stdout.write(
+                f"{Back.YELLOW}{Fore.BLACK}{bytearray_to_string(data)}"
+                f"{Style.RESET_ALL}{linesep}"
             )
 
     def _print_receive_data(self, data: bytearray | bytes):
         if self._flag_show_receive_data:
-            print_flush(
-                f"{Back.CYAN}{Fore.BLACK}{bytearray_to_string(data)}{Style.RESET_ALL}"
+            stdout.write(
+                f"{Back.CYAN}{Fore.BLACK}{bytearray_to_string(data)}"
+                f"{Style.RESET_ALL}"
             )
+            stdout.flush()
 
     def _print_receive_data_end(self):
         if self._flag_show_receive_data:
-            print_newline()
+            stdout.write(linesep)
 
 # BaseFunctions End
 
