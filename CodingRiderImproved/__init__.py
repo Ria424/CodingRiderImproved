@@ -1,8 +1,4 @@
-__all__ = [
-    "Drone",
-    "protocol",
-    "system"
-]
+__version__ = "0.0.1"
 
 from . import protocol, system
 from .drone import Drone
