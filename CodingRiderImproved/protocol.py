@@ -4,9 +4,9 @@ from typing import Any, Self
 
 from .system import (DeviceType, Headless, ModeControlFlight, ModeFlight,
                      ModelNumber, ModeMovement, ModeSystem, ModeUpdate,
-                     SensorOrientation)
+                     Rotation, SensorOrientation)
 
-class ISerializable:
+class ISerializableBase:
     @staticmethod
     def get_size() -> int: ...
 
@@ -14,6 +14,10 @@ class ISerializable:
 
     @classmethod
     def parse(cls, data_array: bytearray | bytes) -> Self | None: ...
+
+class ISerializable(ISerializableBase):
+    @staticmethod
+    def unpack(data_array: bytearray | bytes) -> tuple[Any, ...]: ...
 
 def _to_basic_type(v: Any):
     if isinstance(v, Enum):
@@ -23,12 +27,14 @@ def _to_basic_type(v: Any):
     return v
 
 class SerializableMeta(type):
-    def __new__(metacls, name: str, bases, namespace: dict[str, Any]):
-        namespace["get_size"] = lambda: calcsize(namespace["_STRUCT_FMT"])
+    def __new__(metacls, name: str, bases, namespace: dict[str, Any], /, fmt: str):
+        namespace["get_size"] = lambda: calcsize(fmt)
+        namespace["unpack"] = lambda data_array: unpack(fmt, data_array)
+
         if "to_array" not in namespace:
             namespace["to_array"] \
                 = lambda self: pack(
-                    namespace["_STRUCT_FMT"],
+                    fmt,
                     *map(_to_basic_type, self.__dict__.values())
                 )
         return type.__new__(metacls, name, bases, namespace)
@@ -100,9 +106,7 @@ class DataType(Enum):
 
     EndOfType = 0xDC
 
-class Header(ISerializable, metaclass=SerializableMeta):
-    _STRUCT_FMT = "<BBBB"
-
+class Header(ISerializable, metaclass=SerializableMeta, fmt="<BBBB"):
     def __init__(
             self, data_type: DataType = DataType.None_, length: int = 0,
             from_: DeviceType = DeviceType.None_,
@@ -115,28 +119,24 @@ class Header(ISerializable, metaclass=SerializableMeta):
     @classmethod
     def parse(cls, data_array: bytearray | bytes):
         if len(data_array) != cls.get_size():
-            return None
+            return
 
-        data_type, length, from_, to = unpack(cls._STRUCT_FMT, data_array)
+        data_type, length, from_, to = cls.unpack(data_array)
         return Header(
             DataType(data_type), length, DeviceType(from_), DeviceType(to)
         )
 
-class Ping(ISerializable, metaclass=SerializableMeta):
-    _STRUCT_FMT = "<Q"
-
+class Ping(ISerializable, metaclass=SerializableMeta, fmt="<Q"):
     def __init__(self, system_time: int = 0):
         self.system_time = system_time
 
     @classmethod
     def parse(cls, data_array: bytearray | bytes):
         if len(data_array) != cls.get_size():
-            return None
-        return Ping(*unpack(cls._STRUCT_FMT, data_array))
+            return
+        return Ping(*cls.unpack(data_array))
 
-class Ack(ISerializable, metaclass=SerializableMeta):
-    _STRUCT_FMT = "<QBH"
-
+class Ack(ISerializable, metaclass=SerializableMeta, fmt="<QBH"):
     def __init__(self):
         self.system_time: int = 0
         self.data_type = DataType.None_
@@ -145,16 +145,14 @@ class Ack(ISerializable, metaclass=SerializableMeta):
     @classmethod
     def parse(cls, data_array: bytearray | bytes):
         if len(data_array) != cls.get_size():
-            return None
+            return
 
         data = Ack()
-        data.system_time, data.data_type, data.crc16 = unpack(cls._STRUCT_FMT, data_array)
+        data.system_time, data.data_type, data.crc16 = cls.unpack(data_array)
         data.data_type = DataType(data.data_type)
         return data
 
-class Error(ISerializable, metaclass=SerializableMeta):
-    _STRUCT_FMT = "<QII"
-
+class Error(ISerializable, metaclass=SerializableMeta, fmt="<QII"):
     def __init__(self):
         self.system_time: int = 0
         self.error_flags_for_sensor: int = 0
@@ -163,31 +161,27 @@ class Error(ISerializable, metaclass=SerializableMeta):
     @classmethod
     def parse(cls, data_array: bytearray | bytes):
         if len(data_array) != cls.get_size():
-            return None
+            return
 
         data = Error()
-        data.system_time, data.error_flags_for_sensor, data.error_flags_for_state = unpack(cls._STRUCT_FMT, data_array)
+        data.system_time, data.error_flags_for_sensor, data.error_flags_for_state = cls.unpack(data_array)
         return data
 
-class Request(ISerializable, metaclass=SerializableMeta):
-    _STRUCT_FMT = "<B"
-
+class Request(ISerializable, metaclass=SerializableMeta, fmt="<B"):
     def __init__(self, data_type: DataType = DataType.None_):
         self.data_type = data_type
 
     @classmethod
     def parse(cls, data_array: bytearray | bytes):
         if len(data_array) != cls.get_size():
-            return None
+            return
 
         data = Request()
-        data.data_type, = unpack(cls._STRUCT_FMT, data_array)
+        data.data_type, = cls.unpack(data_array)
         data.data_type = DataType(data.data_type)
         return data
 
-class RequestOption(ISerializable, metaclass=SerializableMeta):
-    _STRUCT_FMT = "<BI"
-
+class RequestOption(ISerializable, metaclass=SerializableMeta, fmt="<BI"):
     def __init__(self):
         self.dataType = DataType.None_
         self.option: int = 0
@@ -195,14 +189,14 @@ class RequestOption(ISerializable, metaclass=SerializableMeta):
     @classmethod
     def parse(cls, data_array: bytearray | bytes):
         if len(data_array) != cls.get_size():
-            return None
+            return
 
         data = RequestOption()
-        data.dataType, data.option = unpack(cls._STRUCT_FMT, data_array)
+        data.dataType, data.option = cls.unpack(data_array)
         data.dataType = DataType(data.dataType)
         return data
 
-class Message(ISerializable):
+class Message(ISerializableBase):
     def __init__(self):
         self.message = ""
 
@@ -221,9 +215,7 @@ class Message(ISerializable):
         data.message = data_array[:len(data_array)].decode()
         return data
 
-class SystemInformation(ISerializable, metaclass=SerializableMeta):
-    _STRUCT_FMT = "<II"
-
+class SystemInformation(ISerializable, metaclass=SerializableMeta, fmt="<II"):
     def __init__(self):
         self.crc32bootloader: int = 0
         self.crc32application: int = 0
@@ -231,13 +223,13 @@ class SystemInformation(ISerializable, metaclass=SerializableMeta):
     @classmethod
     def parse(cls, data_array: bytearray | bytes):
         if len(data_array) != cls.get_size():
-            return None
+            return
 
         data = SystemInformation()
-        data.crc32bootloader, data.crc32application = unpack(cls._STRUCT_FMT, data_array)
+        data.crc32bootloader, data.crc32application = cls.unpack(data_array)
         return data
 
-class Version(ISerializable):
+class Version(ISerializableBase):
     def __init__(self):
         self.build: int = 0
         self.minor: int = 0
@@ -261,7 +253,7 @@ class Version(ISerializable):
         data.build, data.minor, data.major = unpack('<HBB', dataArray)
         return data
 
-class Information(ISerializable):
+class Information(ISerializableBase):
     def __init__(self):
         self.mode_update = ModeUpdate.None_
 
@@ -289,7 +281,7 @@ class Information(ISerializable):
     @classmethod
     def parse(cls, data_array: bytearray | bytes):
         if len(data_array) != cls.get_size():
-            return None
+            return
 
         data = Information()
         data.mode_update, = unpack("<B", data_array[:1])
@@ -304,22 +296,20 @@ class Information(ISerializable):
 
         return data
 
-class UpdateLocation(ISerializable, metaclass=SerializableMeta):
-    _STRUCT_FMT = "<H"
-
+class UpdateLocation(ISerializable, metaclass=SerializableMeta, fmt="<H"):
     def __init__(self):
         self.index_block_next: int = 0
 
     @classmethod
     def parse(cls, data_array: bytearray | bytes):
         if len(data_array) != cls.get_size():
-            return None
+            return
 
         data = UpdateLocation()
-        data.index_block_next, = unpack(cls._STRUCT_FMT, data_array)
+        data.index_block_next, = cls.unpack(data_array)
         return data
 
-class Address(ISerializable):
+class Address(ISerializableBase):
     def __init__(self):
         self.address = bytearray()
 
@@ -333,15 +323,13 @@ class Address(ISerializable):
     @classmethod
     def parse(cls, data_array: bytearray | bytes):
         if len(data_array) != cls.get_size():
-            return None
+            return
 
         data = Address()
         data.address = data_array[:16]
         return data
 
-class Pairing(ISerializable, metaclass=SerializableMeta):
-    _STRUCT_FMT = "<BBBBBB"
-
+class Pairing(ISerializable, metaclass=SerializableMeta, fmt="<BBBBBB"):
     def __init__(
             self, address0: int = 0, address1: int = 0, address2: int = 0,
             address3: int = 0, address4: int = 0, channel0: int = 0):
@@ -359,48 +347,42 @@ class Pairing(ISerializable, metaclass=SerializableMeta):
     @classmethod
     def parse(cls, data_array: bytearray | bytes):
         if len(data_array) != cls.get_size():
-            return None
+            return
 
         data = Pairing()
         (
             data.address0, data.address1, data.address2, data.address3,
             data.address4, data.channel0
-        ) = unpack(cls._STRUCT_FMT, data_array)
+        ) = cls.unpack(data_array)
         return data
 
-class ResponseRate(ISerializable, metaclass=SerializableMeta):
-    _STRUCT_FMT = "<B"
-
+class ResponseRate(ISerializable, metaclass=SerializableMeta, fmt="<B"):
     def __init__(self):
         self.response_rate: int = 0
 
     @classmethod
     def parse(cls, data_array: bytearray | bytes):
         if len(data_array) != cls.get_size():
-            return None
+            return
 
         data = ResponseRate()
-        data.response_rate, = unpack(cls._STRUCT_FMT, data_array)
+        data.response_rate, = cls.unpack(data_array)
         return data
 
-class Rssi(ISerializable, metaclass=SerializableMeta):
-    _STRUCT_FMT = "<b"
-
+class Rssi(ISerializable, metaclass=SerializableMeta, fmt="<b"):
     def __init__(self):
         self.rssi: int = 0
 
     @classmethod
     def parse(cls, data_array: bytearray | bytes):
         if len(data_array) != cls.get_size():
-            return None
+            return
 
         data = Rssi()
-        data.rssi, = unpack(cls._STRUCT_FMT, data_array)
+        data.rssi, = cls.unpack(data_array)
         return data
 
-class State(ISerializable, metaclass=SerializableMeta):
-    _STRUCT_FMT = "<BBBBBBBB"
-
+class State(ISerializable, metaclass=SerializableMeta, fmt="<BBBBBBBB"):
     def __init__(self):
         self.mode_system = ModeSystem.None_
         self.mode_flight = ModeFlight.None_
@@ -414,7 +396,7 @@ class State(ISerializable, metaclass=SerializableMeta):
     @classmethod
     def parse(cls, data_array: bytearray | bytes):
         if len(data_array) != cls.get_size():
-            return None
+            return
 
         data = State()
 
@@ -422,7 +404,7 @@ class State(ISerializable, metaclass=SerializableMeta):
             data.mode_system, data.mode_flight, data.mode_control_flight,
             data.mode_movement, data.headless, data.control_speed,
             data.sensor_orientation, data.battery
-        ) = unpack(cls._STRUCT_FMT, data_array)
+        ) = cls.unpack(data_array)
 
         data.mode_system = ModeSystem(data.mode_system)
         data.mode_flight = ModeFlight(data.mode_flight)
@@ -433,9 +415,7 @@ class State(ISerializable, metaclass=SerializableMeta):
 
         return data
 
-class Attitude(ISerializable, metaclass=SerializableMeta):
-    _STRUCT_FMT = "<hhh"
-
+class Attitude(ISerializable, metaclass=SerializableMeta, fmt="<hhh"):
     def __init__(self):
         self.roll: int = 0
         self.pitch: int = 0
@@ -444,15 +424,13 @@ class Attitude(ISerializable, metaclass=SerializableMeta):
     @classmethod
     def parse(cls, data_array: bytearray | bytes):
         if len(data_array) != cls.get_size():
-            return None
+            return
 
         data = Attitude()
-        data.roll, data.pitch, data.yaw = unpack(cls._STRUCT_FMT, data_array)
+        data.roll, data.pitch, data.yaw = cls.unpack(data_array)
         return data
 
-class Position(ISerializable, metaclass=SerializableMeta):
-    _STRUCT_FMT = "<fff"
-
+class Position(ISerializable, metaclass=SerializableMeta, fmt="<fff"):
     def __init__(self):
         self.x: float = 0
         self.y: float = 0
@@ -461,15 +439,13 @@ class Position(ISerializable, metaclass=SerializableMeta):
     @classmethod
     def parse(cls, data_array: bytearray | bytes):
         if len(data_array) != cls.get_size():
-            return None
+            return
 
         data = Position()
-        data.x, data.y, data.z = unpack(cls._STRUCT_FMT, data_array)
+        data.x, data.y, data.z = cls.unpack(data_array)
         return data
 
-class Altitude(ISerializable, metaclass=SerializableMeta):
-    _STRUCT_FMT = "<ffff"
-
+class Altitude(ISerializable, metaclass=SerializableMeta, fmt="<ffff"):
     def __init__(self):
         self.temperature: float = 0
         self.pressure: float = 0
@@ -479,15 +455,13 @@ class Altitude(ISerializable, metaclass=SerializableMeta):
     @classmethod
     def parse(cls, data_array: bytearray | bytes):
         if len(data_array) != cls.get_size():
-            return None
+            return
 
         data = Altitude()
-        data.temperature, data.pressure, data.altitude, data.range_height = unpack(cls._STRUCT_FMT, data_array)
+        data.temperature, data.pressure, data.altitude, data.range_height = cls.unpack(data_array)
         return data
 
-class Motion(ISerializable, metaclass=SerializableMeta):
-    _STRUCT_FMT = "<hhhhhhhhh"
-
+class Motion(ISerializable, metaclass=SerializableMeta, fmt="<hhhhhhhhh"):
     def __init__(self):
         self.accel_x: int = 0
         self.accel_y: int = 0
@@ -502,19 +476,17 @@ class Motion(ISerializable, metaclass=SerializableMeta):
     @classmethod
     def parse(cls, data_array: bytearray | bytes):
         if len(data_array) != cls.get_size():
-            return None
+            return
 
         data = Motion()
         (
             data.accel_x, data.accel_y, data.accel_z, data.gyro_roll,
             data.gyro_pitch, data.gyro_yaw, data.angle_roll, data.angle_pitch,
             data.angle_yaw
-        ) = unpack(cls._STRUCT_FMT, data_array)
+        ) = cls.unpack(data_array)
         return data
 
-class Range(ISerializable, metaclass=SerializableMeta):
-    _STRUCT_FMT = "<hhhhhh"
-
+class Range(ISerializable, metaclass=SerializableMeta, fmt="<hhhhhh"):
     def __init__(self):
         self.left: int = 0
         self.front: int = 0
@@ -526,18 +498,16 @@ class Range(ISerializable, metaclass=SerializableMeta):
     @classmethod
     def parse(cls, data_array: bytearray | bytes):
         if len(data_array) != cls.get_size():
-            return None
+            return
 
         data = Range()
         (
             data.left, data.front, data.right, data.rear, data.top,
             data.bottom
-        ) = unpack(cls._STRUCT_FMT, data_array)
+        ) = cls.unpack(data_array)
         return data
 
-class Trim(ISerializable, metaclass=SerializableMeta):
-    _STRUCT_FMT = "<hhhh"
-
+class Trim(ISerializable, metaclass=SerializableMeta, fmt="<hhhh"):
     def __init__(self):
         self.roll: int = 0
         self.pitch: int = 0
@@ -547,10 +517,10 @@ class Trim(ISerializable, metaclass=SerializableMeta):
     @classmethod
     def parse(cls, data_array: bytearray | bytes):
         if len(data_array) != cls.get_size():
-            return None
+            return
 
         data = Trim()
-        data.roll, data.pitch, data.yaw, data.throttle = unpack(cls._STRUCT_FMT, data_array)
+        data.roll, data.pitch, data.yaw, data.throttle = cls.unpack(data_array)
         return data
 
 class ButtonFlagController(Enum):
@@ -585,9 +555,7 @@ class ButtonEvent(Enum):
 
     EndContinuePress = 0x04  # 연속 입력 종료
 
-class Button(ISerializable, metaclass=SerializableMeta):
-    _STRUCT_FMT = "<HB"
-
+class Button(ISerializable, metaclass=SerializableMeta, fmt="<HB"):
     def __init__(self):
         self.button: int = 0
         self.event = ButtonEvent.None_
@@ -595,10 +563,10 @@ class Button(ISerializable, metaclass=SerializableMeta):
     @classmethod
     def parse(cls, data_array: bytearray | bytes):
         if len(data_array) != cls.get_size():
-            return None
+            return
 
         data = Button()
-        data.button, data.event = unpack(cls._STRUCT_FMT, data_array)
+        data.button, data.event = cls.unpack(data_array)
         data.event = ButtonEvent(data.event)
         return data
 
@@ -660,9 +628,7 @@ class BuzzerMelody(Enum):
 
     EndOfType    = 0x14
 
-class Buzzer(ISerializable, metaclass=SerializableMeta):
-    _STRUCT_FMT = "<BHH"
-
+class Buzzer(ISerializable, metaclass=SerializableMeta, fmt="<BHH"):
     def __init__(self):
         self.mode = BuzzerMode.Stop
         self.value: int = 0
@@ -671,10 +637,10 @@ class Buzzer(ISerializable, metaclass=SerializableMeta):
     @classmethod
     def parse(cls, data_array: bytearray | bytes):
         if len(data_array) != cls.get_size():
-            return None
+            return
 
         data = Buzzer()
-        data.mode, data.value, data.time = unpack(cls._STRUCT_FMT, data_array)
+        data.mode, data.value, data.time = cls.unpack(data_array)
         data.mode = BuzzerMode(data.mode)
         return data
 
@@ -717,9 +683,7 @@ class CommandType(Enum):
 
     EndOfType = 0xEC
 
-class Command(ISerializable, metaclass=SerializableMeta):
-    _STRUCT_FMT = "<BB"
-
+class Command(ISerializable, metaclass=SerializableMeta, fmt="<BB"):
     def __init__(self, command_type: CommandType = CommandType.None_, option: int = ModeControlFlight.None_.value): # TODO is option intager?
         self.command_type = command_type
         self.option = option
@@ -727,14 +691,14 @@ class Command(ISerializable, metaclass=SerializableMeta):
     @classmethod
     def parse(cls, data_array: bytearray | bytes):
         if len(data_array) != cls.get_size():
-            return None
+            return
 
         data = Command()
-        data.command_type, data.option = unpack(cls._STRUCT_FMT, data_array)
+        data.command_type, data.option = cls.unpack(data_array)
         data.command_type = CommandType(data.command_type)
         return data
 
-class CommandLightEvent(ISerializable):
+class CommandLightEvent(ISerializableBase):
     def __init__(self):
         self.command = Command()
         self.event = LightEvent()
@@ -752,14 +716,14 @@ class CommandLightEvent(ISerializable):
     @classmethod
     def parse(cls, data_array: bytearray | bytes):
         if len(data_array) != cls.get_size():
-            return None
+            return
 
         data = CommandLightEvent()
         data.command = Command.parse(data_array[:Command.get_size()])
         data.event = LightEvent.parse(data_array[Command.get_size():Command.get_size()+LightEvent.get_size()])
         return data
 
-class CommandLightEventColor(ISerializable):
+class CommandLightEventColor(ISerializableBase):
     def __init__(self):
         self.command = Command()
         self.event = LightEvent()
@@ -779,7 +743,7 @@ class CommandLightEventColor(ISerializable):
     @classmethod
     def parse(cls, data_array: bytearray | bytes):
         if len(data_array) != cls.get_size():
-            return None
+            return
 
         data = CommandLightEventColor()
         data.command = Command.parse(data_array[:Command.get_size()])
@@ -787,7 +751,7 @@ class CommandLightEventColor(ISerializable):
         data.color = Color.parse(data_array[Command.get_size()+LightEvent.get_size():Command.get_size()+LightEvent.get_size()+Color.get_size()])
         return data
 
-class CommandLightEventColors(ISerializable):
+class CommandLightEventColors(ISerializableBase):
     def __init__(self):
         self.command = Command()
         self.event = LightEvent()
@@ -807,7 +771,7 @@ class CommandLightEventColors(ISerializable):
     @classmethod
     def parse(cls, data_array: bytearray | bytes):
         if len(data_array) != cls.get_size():
-            return None
+            return
 
         data = CommandLightEventColors()
         data.command = Command.parse(data_array[:Command.get_size()])
@@ -818,9 +782,7 @@ class CommandLightEventColors(ISerializable):
 
         return data
 
-class ControlQuad8(ISerializable, metaclass=SerializableMeta):
-    _STRUCT_FMT = "<bbbb"
-
+class ControlQuad8(ISerializable, metaclass=SerializableMeta, fmt="<bbbb"):
     def __init__(self, roll: int = 0, pitch: int = 0, yaw: int = 0, throttle: int = 0):
         self.roll = roll
         self.pitch = pitch
@@ -830,15 +792,15 @@ class ControlQuad8(ISerializable, metaclass=SerializableMeta):
     @classmethod
     def parse(cls, data_array: bytearray | bytes):
         if len(data_array) != cls.get_size():
-            return None
+            return
 
         data = ControlQuad8()
-        data.roll, data.pitch, data.yaw, data.throttle = unpack(cls._STRUCT_FMT, data_array)
+        data.roll, data.pitch, data.yaw, data.throttle = cls.unpack(data_array)
         return data
 
-class ControlQuad8AndRequestData(ISerializable, metaclass=SerializableMeta):
-    _STRUCT_FMT = "<bbbbb"
-
+class ControlQuad8AndRequestData(
+    ISerializable, metaclass=SerializableMeta, fmt="<bbbbb"
+):
     def __init__(self):
         self.roll: int = 0
         self.pitch: int = 0
@@ -849,16 +811,14 @@ class ControlQuad8AndRequestData(ISerializable, metaclass=SerializableMeta):
     @classmethod
     def parse(cls, data_array: bytearray | bytes):
         if len(data_array) != cls.get_size():
-            return None
+            return
 
         data = ControlQuad8AndRequestData()
-        data.roll, data.pitch, data.yaw, data.throttle, data.data_type = unpack(cls._STRUCT_FMT, data_array)
+        data.roll, data.pitch, data.yaw, data.throttle, data.data_type = cls.unpack(data_array)
         data.data_type = DataType(data.data_type)
         return data
 
-class ControlPositionShort(ISerializable, metaclass=SerializableMeta):
-    _STRUCT_FMT = "<hhhhhh"
-
+class ControlPositionShort(ISerializable, metaclass=SerializableMeta, fmt="<hhhhhh"):
     def __init__(self):
         self.x: int = 0
         self.y: int = 0
@@ -872,15 +832,13 @@ class ControlPositionShort(ISerializable, metaclass=SerializableMeta):
     @classmethod
     def parse(cls, data_array: bytearray | bytes):
         if len(data_array) != cls.get_size():
-            return None
+            return
 
         data = ControlPositionShort()
-        data.x, data.y, data.z, data.velocity, data.heading, data.rotational_velocity = unpack(cls._STRUCT_FMT, data_array)
+        data.x, data.y, data.z, data.velocity, data.heading, data.rotational_velocity = cls.unpack(data_array)
         return data
 
-class ControlPosition(ISerializable, metaclass=SerializableMeta):
-    _STRUCT_FMT = "<ffffhh"
-
+class ControlPosition(ISerializable, metaclass=SerializableMeta, fmt="<ffffhh"):
     def __init__(self):
         self.x: float = 0
         self.y: float = 0
@@ -894,18 +852,13 @@ class ControlPosition(ISerializable, metaclass=SerializableMeta):
     @classmethod
     def parse(cls, data_array: bytearray | bytes):
         if len(data_array) != cls.get_size():
-            return None
+            return
 
         data = ControlPosition()
-        data.x, data.y, data.z, data.velocity, data.heading, data.rotational_velocity = unpack(cls._STRUCT_FMT, data_array)
+        data.x, data.y, data.z, data.velocity, data.heading, data.rotational_velocity = cls.unpack(data_array)
         return data
 
-from CodingRiderImproved.system import Rotation
-
-
-class MotorBlock(ISerializable, metaclass=SerializableMeta):
-    _STRUCT_FMT = "<Bh"
-
+class MotorBlock(ISerializable, metaclass=SerializableMeta, fmt="<Bh"):
     def __init__(self):
         self.rotation: Rotation = Rotation.None_
         self.value: int = 0
@@ -913,14 +866,14 @@ class MotorBlock(ISerializable, metaclass=SerializableMeta):
     @classmethod
     def parse(cls, data_array: bytearray | bytes):
         if len(data_array) != cls.get_size():
-            return None
+            return
 
         data = MotorBlock()
-        data.rotation, data.value = unpack(cls._STRUCT_FMT, data_array)
+        data.rotation, data.value = cls.unpack(data_array)
         data.rotation = Rotation(data.rotation)
         return data
 
-class Motor(ISerializable):
+class Motor(ISerializableBase):
     def __init__(
             self, motor0=MotorBlock(), motor1=MotorBlock(),
             motor2=MotorBlock(), motor3=MotorBlock()):
@@ -936,7 +889,7 @@ class Motor(ISerializable):
     @classmethod
     def parse(cls, data_array: bytearray | bytes):
         if len(data_array) != cls.get_size():
-            return None
+            return
 
         motor_block_size = MotorBlock.get_size()
         return Motor(*(
@@ -945,22 +898,20 @@ class Motor(ISerializable):
             ) for i in range(3) 
         )) # type: ignore
 
-class MotorBlockV(ISerializable, metaclass=SerializableMeta):
-    _STRUCT_FMT = "<h"
-
+class MotorBlockV(ISerializable, metaclass=SerializableMeta, fmt="<h"):
     def __init__(self):
         self.value: int = 0
 
     @classmethod
     def parse(cls, data_array: bytearray | bytes):
         if len(data_array) != cls.get_size():
-            return None
+            return
 
         data = MotorBlockV()
-        data.value, = unpack(cls._STRUCT_FMT, data_array)
+        data.value, = cls.unpack(data_array)
         return data
 
-class MotorV(ISerializable):
+class MotorV(ISerializableBase):
     def __init__(
             self, motor0=MotorBlockV(), motor1=MotorBlockV(),
             motor2=MotorBlockV(), motor3=MotorBlockV()):
@@ -976,7 +927,7 @@ class MotorV(ISerializable):
     @classmethod
     def parse(cls, data_array: bytearray | bytes):
         if len(data_array) != cls.get_size():
-            return None
+            return
 
         motor_block_size = MotorBlockV.get_size()
         return Motor(*(
@@ -985,9 +936,7 @@ class MotorV(ISerializable):
             ) for i in range(3) 
         )) # type: ignore
 
-class MotorSingle(ISerializable, metaclass=SerializableMeta):
-    _STRUCT_FMT = "<BBh"
-
+class MotorSingle(ISerializable, metaclass=SerializableMeta, fmt="<BBh"):
     def __init__(self):
         self.target: int = 0
         self.rotation = Rotation.None_
@@ -996,16 +945,14 @@ class MotorSingle(ISerializable, metaclass=SerializableMeta):
     @classmethod
     def parse(cls, data_array: bytearray | bytes):
         if len(data_array) != cls.get_size():
-            return None
+            return
 
         data = MotorSingle()
-        data.target, data.rotation, data.value = unpack(cls._STRUCT_FMT, data_array)
+        data.target, data.rotation, data.value = cls.unpack(data_array)
         data.rotation = Rotation(data.rotation)
         return data
 
-class MotorSingleV(ISerializable, metaclass=SerializableMeta):
-    _STRUCT_FMT = "<Bh"
-
+class MotorSingleV(ISerializable, metaclass=SerializableMeta, fmt="<Bh"):
     def __init__(self):
         self.target: int = 0
         self.value: int = 0
@@ -1013,15 +960,15 @@ class MotorSingleV(ISerializable, metaclass=SerializableMeta):
     @classmethod
     def parse(cls, data_array: bytearray | bytes):
         if len(data_array) != cls.get_size():
-            return None
+            return
 
         data = MotorSingleV()
-        data.target, data.value = unpack(cls._STRUCT_FMT, data_array)
+        data.target, data.value = cls.unpack(data_array)
         return data
 
-class InformationAssembledForController(ISerializable, metaclass=SerializableMeta):
-    _STRUCT_FMT = "<hhhHhhhbbBb"
-
+class InformationAssembledForController(
+    ISerializable, metaclass=SerializableMeta, fmt="<hhhHhhhbbBb"
+):
     def __init__(self):
         self.angle_roll: int = 0
         self.angle_pitch: int = 0
@@ -1043,7 +990,7 @@ class InformationAssembledForController(ISerializable, metaclass=SerializableMet
     @classmethod
     def parse(cls, data_array: bytearray | bytes):
         if len(data_array) != cls.get_size():
-            return None
+            return
 
         data = InformationAssembledForController()
 
@@ -1051,13 +998,13 @@ class InformationAssembledForController(ISerializable, metaclass=SerializableMet
             data.angle_roll, data.angle_pitch, data.angle_yaw, data.rpm,
             data.pos_x, data.pos_y, data.pos_z,
             data.speed_x, data.speed_y, data.range_height, data.rssi
-        ) = unpack(cls._STRUCT_FMT, data_array)
+        ) = cls.unpack(data_array)
 
         return data
 
-class InformationAssembledForEntry(ISerializable, metaclass=SerializableMeta):
-    _STRUCT_FMT = "<hhhhhhhf"
-
+class InformationAssembledForEntry(
+    ISerializable, metaclass=SerializableMeta, fmt="<hhhhhhhf"
+):
     def __init__(self):
         self.angle_roll: int = 0
         self.angle_pitch: int = 0
@@ -1073,13 +1020,13 @@ class InformationAssembledForEntry(ISerializable, metaclass=SerializableMeta):
     @classmethod
     def parse(cls, data_array: bytearray | bytes):
         if len(data_array) != cls.get_size():
-            return None
+            return
 
         data = InformationAssembledForEntry()
         (
             data.angle_roll, data.angle_pitch, data.angle_yaw, data.pos_x,
             data.pos_y, data.pos_z, data.range_height, data.altitude
-        ) = unpack(cls._STRUCT_FMT, data_array)
+        ) = cls.unpack(data_array)
         return data
 
 class JoystickDirection(Enum):
@@ -1112,9 +1059,7 @@ class JoystickEvent(Enum):
 
     EndOfType  = 4
 
-class JoystickBlock(ISerializable, metaclass=SerializableMeta):
-    _STRUCT_FMT = "<bbBB"
-
+class JoystickBlock(ISerializable, metaclass=SerializableMeta, fmt="<bbBB"):
     def __init__(self):
         self.x: int = 0
         self.y: int = 0
@@ -1124,15 +1069,15 @@ class JoystickBlock(ISerializable, metaclass=SerializableMeta):
     @classmethod
     def parse(cls, data_array: bytearray | bytes):
         if len(data_array) != cls.get_size():
-            return None
+            return
 
         data = JoystickBlock()
-        data.x, data.y, data.direction, data.event = unpack(cls._STRUCT_FMT, data_array)
+        data.x, data.y, data.direction, data.event = cls.unpack(data_array)
         data.direction = JoystickDirection(data.direction)
         data.event = JoystickEvent(data.event)
         return data
 
-class Joystick(ISerializable):
+class Joystick(ISerializableBase):
     def __init__(self):
         self.left = JoystickBlock()
         self.right = JoystickBlock()
@@ -1150,7 +1095,7 @@ class Joystick(ISerializable):
     @classmethod
     def parse(cls, data_array: bytearray | bytes):
         if len(data_array) != cls.get_size():
-            return None
+            return
 
         data = Joystick()
         data.left = JoystickBlock.parse(data_array[:JoystickBlock.get_size()])
@@ -1263,9 +1208,7 @@ class LightFlagsController(Enum):
     E4 = 0x0040
     E5 = 0x0080
 
-class Color(ISerializable, metaclass=SerializableMeta):
-    _STRUCT_FMT = "<BBB"
-
+class Color(ISerializable, metaclass=SerializableMeta, fmt="<BBB"):
     def __init__(self):
         self.r: int = 0
         self.g: int = 0
@@ -1274,10 +1217,10 @@ class Color(ISerializable, metaclass=SerializableMeta):
     @classmethod
     def parse(cls, data_array: bytearray | bytes):
         if len(data_array) != cls.get_size():
-            return None
+            return
 
         data = Color()
-        data.r, data.g, data.b = unpack(cls._STRUCT_FMT, data_array)
+        data.r, data.g, data.b = cls.unpack(data_array)
         return data
 
 class Colors(Enum):
@@ -1425,9 +1368,7 @@ class Colors(Enum):
 
     EndOfType              = 141
 
-class LightManual(ISerializable, metaclass=SerializableMeta):
-    _STRUCT_FMT = "<HB"
-
+class LightManual(ISerializable, metaclass=SerializableMeta, fmt="<HB"):
     def __init__(self):
         self.flags: int = 0
         self.brightness: int = 0
@@ -1435,15 +1376,13 @@ class LightManual(ISerializable, metaclass=SerializableMeta):
     @classmethod
     def parse(cls, data_array: bytearray | bytes):
         if len(data_array) != cls.get_size():
-            return None
+            return
 
         data = LightManual()
-        data.flags, data.brightness = unpack(cls._STRUCT_FMT, data_array)
+        data.flags, data.brightness = cls.unpack(data_array)
         return data
 
-class LightMode(ISerializable, metaclass=SerializableMeta):
-    _STRUCT_FMT = "<BH"
-
+class LightMode(ISerializable, metaclass=SerializableMeta, fmt="<BH"):
     def __init__(self):
         self.mode: int = 0
         self.interval: int = 0
@@ -1451,15 +1390,13 @@ class LightMode(ISerializable, metaclass=SerializableMeta):
     @classmethod
     def parse(cls, data_array: bytearray | bytes):
         if len(data_array) != cls.get_size():
-            return None
+            return
 
         data = LightMode()
-        data.mode, data.interval = unpack(cls._STRUCT_FMT, data_array)
+        data.mode, data.interval = cls.unpack(data_array)
         return data
 
-class LightEvent(ISerializable, metaclass=SerializableMeta):
-    _STRUCT_FMT = "<BHB"
-
+class LightEvent(ISerializable, metaclass=SerializableMeta, fmt="<BHB"):
     def __init__(self):
         self.event: int = 0
         self.interval: int = 0
@@ -1468,13 +1405,13 @@ class LightEvent(ISerializable, metaclass=SerializableMeta):
     @classmethod
     def parse(cls, data_array: bytearray | bytes):
         if len(data_array) != cls.get_size():
-            return None
+            return
 
         data = LightEvent()
-        data.event, data.interval, data.repeat = unpack(cls._STRUCT_FMT, data_array)
+        data.event, data.interval, data.repeat = cls.unpack(data_array)
         return data
 
-class LightModeColor(ISerializable):
+class LightModeColor(ISerializableBase):
     def __init__(self):
         self.mode = LightMode()
         self.color = Color()
@@ -1492,14 +1429,14 @@ class LightModeColor(ISerializable):
     @classmethod
     def parse(cls, data_array: bytearray | bytes):
         if len(data_array) != cls.get_size():
-            return None
+            return
 
         data = LightModeColor()
         data.mode = LightMode.parse(data_array[:LightMode.get_size()])
         data.color = Color.parse(data_array[LightMode.get_size():LightMode.get_size()+Color.get_size()])
         return data
 
-class LightModeColors(ISerializable):
+class LightModeColors(ISerializableBase):
     def __init__(self):
         self.mode = LightMode()
         self.colors = Colors.Black
@@ -1517,7 +1454,7 @@ class LightModeColors(ISerializable):
     @classmethod
     def parse(cls, data_array: bytearray | bytes):
         if len(data_array) != cls.get_size():
-            return None
+            return
 
         data = LightModeColors()
         data.mode = LightMode.parse(data_array[:LightMode.get_size()])
@@ -1527,7 +1464,7 @@ class LightModeColors(ISerializable):
 
         return data
 
-class LightEventColor(ISerializable):
+class LightEventColor(ISerializableBase):
     def __init__(self):
         self.event = LightEvent()
         self.color = Color()
@@ -1545,7 +1482,7 @@ class LightEventColor(ISerializable):
     @classmethod
     def parse(cls, data_array: bytearray | bytes):
         if len(data_array) != cls.get_size():
-            return None
+            return
 
         data = LightEventColor()
 
@@ -1560,7 +1497,7 @@ class LightEventColor(ISerializable):
 
         return data
 
-class LightEventColors(ISerializable):
+class LightEventColors(ISerializableBase):
     def __init__(self):
         self.event = LightEvent()
         self.colors = Colors.Black
@@ -1578,7 +1515,7 @@ class LightEventColors(ISerializable):
     @classmethod
     def parse(cls, data_array: bytearray | bytes):
         if len(data_array) != cls.get_size():
-            return None
+            return
 
         data = LightEventColors()
         data.event = LightEvent.parse(data_array[:LightEvent.get_size()])
@@ -1588,9 +1525,7 @@ class LightEventColors(ISerializable):
 
         return data
 
-class RawMotion(ISerializable, metaclass=SerializableMeta):
-    _STRUCT_FMT = "<hhhhhh"
-
+class RawMotion(ISerializable, metaclass=SerializableMeta, fmt="<hhhhhh"):
     def __init__(self):
         self.accel_x: int = 0
         self.accel_y: int = 0
@@ -1602,15 +1537,13 @@ class RawMotion(ISerializable, metaclass=SerializableMeta):
     @classmethod
     def parse(cls, data_array: bytearray | bytes):
         if len(data_array) != cls.get_size():
-            return None
+            return
 
         data = RawMotion()
-        data.accel_x, data.accel_y, data.accel_z, data.gyro_roll, data.gyro_pitch, data.gyro_yaw = unpack(cls._STRUCT_FMT, data_array)
+        data.accel_x, data.accel_y, data.accel_z, data.gyro_roll, data.gyro_pitch, data.gyro_yaw = cls.unpack(data_array)
         return data
 
-class VisionSensor(ISerializable, metaclass=SerializableMeta):
-    _STRUCT_FMT = "<fff"
-
+class VisionSensor(ISerializable, metaclass=SerializableMeta, fmt="<fff"):
     def __init__(self):
         self.x: float = 0
         self.y: float = 0
@@ -1619,15 +1552,13 @@ class VisionSensor(ISerializable, metaclass=SerializableMeta):
     @classmethod
     def parse(cls, data_array: bytearray | bytes):
         if len(data_array) != cls.get_size():
-            return None
+            return
 
         data = VisionSensor()
-        data.x, data.y, data.z = unpack(cls._STRUCT_FMT, data_array)
+        data.x, data.y, data.z = cls.unpack(data_array)
         return data
 
-class Count(ISerializable, metaclass=SerializableMeta):
-    _STRUCT_FMT = "<QHHH"
-
+class Count(ISerializable, metaclass=SerializableMeta, fmt="<QHHH"):
     def __init__(self):
         self.time_flight: int = 0
 
@@ -1638,18 +1569,16 @@ class Count(ISerializable, metaclass=SerializableMeta):
     @classmethod
     def parse(cls, data_array: bytearray | bytes):
         if len(data_array) != cls.get_size():
-            return None
+            return
 
         data = Count()
         (
             data.time_flight, data.count_takeOff, data.count_landing,
             data.count_accident
-        )= unpack(cls._STRUCT_FMT, data_array)
+        )= cls.unpack(data_array)
         return data
 
-class Bias(ISerializable, metaclass=SerializableMeta):
-    _STRUCT_FMT = "<hhhhhh"
-
+class Bias(ISerializable, metaclass=SerializableMeta, fmt="<hhhhhh"):
     def __init__(self):
         self.accel_x: int = 0
         self.accel_y: int = 0
@@ -1661,33 +1590,29 @@ class Bias(ISerializable, metaclass=SerializableMeta):
     @classmethod
     def parse(cls, data_array: bytearray | bytes):
         if len(data_array) != cls.get_size():
-            return None
+            return
 
         data = Bias()
         (
             data.accel_x, data.accel_y, data.accel_z, data.gyro_roll,
             data.gyro_pitch, data.gyro_yaw
-        ) = unpack(cls._STRUCT_FMT, data_array)
+        ) = cls.unpack(data_array)
         return data
 
-class Weight(ISerializable, metaclass=SerializableMeta):
-    _STRUCT_FMT = "<f"
-
+class Weight(ISerializable, metaclass=SerializableMeta, fmt="<f"):
     def __init__(self):
         self.weight: float = 0
 
     @classmethod
     def parse(cls, data_array: bytearray | bytes):
         if len(data_array) != cls.get_size():
-            return None
+            return
 
         data = Weight()
-        data.weight, = unpack(cls._STRUCT_FMT, data_array)
+        data.weight, = cls.unpack(data_array)
         return data
 
-class LostConnection(ISerializable, metaclass=SerializableMeta):
-    _STRUCT_FMT = "<HHI"
-
+class LostConnection(ISerializable, metaclass=SerializableMeta, fmt="<HHI"):
     def __init__(self):
         self.time_neutral: int = 0
         self.time_landing: int = 0
@@ -1696,9 +1621,9 @@ class LostConnection(ISerializable, metaclass=SerializableMeta):
     @classmethod
     def parse(cls, data_array: bytearray | bytes):
         if len(data_array) != cls.get_size():
-            return None
+            return
 
         data = LostConnection()
         data.time_neutral, data.time_landing, data.time_stop \
-            = unpack(cls._STRUCT_FMT, data_array)
+            = cls.unpack(data_array)
         return data

@@ -1,7 +1,5 @@
-from os import linesep
 from queue import Queue
 from struct import pack
-from sys import stdout
 from threading import Thread
 from time import perf_counter, sleep, time
 from typing import Any, Callable, Literal
@@ -10,18 +8,14 @@ from colorama import Back, Fore, Style
 from colorama import init as colorama_init
 from serial import Serial, SerialException
 
+from ._wrapped import print_flush, println
 from .crc import crc16
 from .protocol import *
 from .receiver import Receiver, StateLoading
 from .system import FlightEvent
 
 def bytearray_to_string(data_array: bytes | bytearray) -> str:
-    string = ""
-
-    for data in data_array:
-        string += f"{data:02X} "
-
-    return string
+    return data_array.hex(" ") + " "
 
 class Drone:
     __slots__ = (
@@ -87,7 +81,7 @@ class Drone:
         self._parser[DataType.RawMotion] = RawMotion.parse
 
         self._parser[DataType.State] = State.parse
-    
+
         self._parser[DataType.Altitude] = Altitude.parse
         self._parser[DataType.Motion] = Motion.parse
 
@@ -173,8 +167,8 @@ class Drone:
             self._serialport.close()
 
     def make_transfer_data_array(
-            self, header: Header, data: bytes | ISerializable) -> bytearray:
-        if isinstance(data, ISerializable):
+            self, header: Header, data: bytes | ISerializableBase) -> bytearray:
+        if isinstance(data, ISerializableBase):
             data = data.to_array()
 
         data_array = bytearray()
@@ -185,7 +179,7 @@ class Drone:
 
         return data_array
 
-    def transfer(self, header: Header, data: ISerializable):
+    def transfer(self, header: Header, data: ISerializableBase):
         if not self.is_open():
             return
 
@@ -302,9 +296,9 @@ class Drone:
 
     def _print_log_base(self, prefix: str, message: Any):
         if message is not None:
-            stdout.write(
+            println(
                 f"{prefix}[{time() - self.initialized_time:10.03f}] {message}"
-                f"{Style.RESET_ALL}{linesep}"
+                f"{Style.RESET_ALL}"
             )
 
     def _print_log(self, message: Any):
@@ -318,22 +312,21 @@ class Drone:
     def _print_transfer_data(self, data: bytearray | bytes | None):
         if self._flag_show_transfer_data \
             and data is not None and len(data) > 0:
-            stdout.write(
+            println(
                 f"{Back.YELLOW}{Fore.BLACK}{bytearray_to_string(data)}"
-                f"{Style.RESET_ALL}{linesep}"
+                f"{Style.RESET_ALL}"
             )
 
     def _print_receive_data(self, data: bytearray | bytes):
         if self._flag_show_receive_data:
-            stdout.write(
+            print_flush(
                 f"{Back.CYAN}{Fore.BLACK}{bytearray_to_string(data)}"
                 f"{Style.RESET_ALL}"
             )
-            stdout.flush()
 
     def _print_receive_data_end(self):
         if self._flag_show_receive_data:
-            stdout.write(linesep)
+            println()
 
 # BaseFunctions End
 
@@ -341,7 +334,7 @@ class Drone:
 
     def send(
             self, data_type: DataType, length: int, from_: DeviceType,
-            to: DeviceType, data: ISerializable):
+            to: DeviceType, data: ISerializableBase):
         return self.transfer(Header(data_type, length, from_, to), data)
 
     def send_command(
