@@ -27,7 +27,7 @@
     */
 """
 
-from typing import Any, Sequence
+from typing import Sequence
 
 _TABLE = (
     0x0000, 0x1021, 0x2042, 0x3063, 0x4084, 0x50a5, 0x60c6, 0x70e7,
@@ -64,7 +64,7 @@ _TABLE = (
     0x6e17, 0x7e36, 0x4e55, 0x5e74, 0x2e93, 0x3eb2, 0x0ed1, 0x1ef0,
 )
 
-def crc16(data: int | Sequence[Any], crc: int) -> int:
+def crc16(data: int | Sequence[int], crc: int) -> int:
     if isinstance(data, int):
         index = ((crc >> 8) ^ data) & 0x00FF
         return ((crc << 8) ^ _TABLE[index]) & 0xFFFF
