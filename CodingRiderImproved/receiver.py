@@ -118,7 +118,7 @@ class Receiver:
                         if data in DataType:
                             self.header.data_type = DataType(data)
                         else:
-                            return self._raise_error(str(Section.Header), "DataType Error. 0x{0:02X}".format(data))
+                            return self._raise_error(str(Section.Header), f"DataType Error. 0x{data:02X}")
 
                         self.crc16calculated = crc16(data, 0)
                     case 1:
@@ -126,19 +126,19 @@ class Receiver:
                         self.crc16calculated = crc16(data, self.crc16calculated)
 
                         if self.header.length > 128:
-                            return self._raise_error(str(Section.Header), "Data length is longer than 128. [{0}]".format(self.header.length))
+                            return self._raise_error(str(Section.Header), f"Data length is longer than 128. [{self.header.length}]")
                     case 2:
                         if data in DeviceType:
                             self.header.from_ = DeviceType(data)
                         else:
-                            return self._raise_error(str(Section.Header), "DeviceType Error. 0x{0:02X}".format(data))
+                            return self._raise_error(str(Section.Header), f"DeviceType Error. 0x{data:02X}")
 
                         self.crc16calculated = crc16(data, self.crc16calculated)
                     case 3:
                         if data in DeviceType:
                             self.header.to = DeviceType(data)
                         else:
-                            return self._raise_error(str(Section.Header), "DeviceType Error. 0x{0:02X}".format(data))
+                            return self._raise_error(str(Section.Header), f"DeviceType Error. 0x{data:02X}")
 
                         self.crc16calculated = crc16(data, self.crc16calculated)
 
@@ -166,7 +166,7 @@ class Receiver:
                             self.data = self._buffer.copy()
                             self.time_receive_complete = now
                             self.state = StateLoading.Loaded
-                            self.message = "Success / Receiver / Section.End / Receive complete / {0} / [receive: 0x{1:04X}]".format(self.header.data_type, self.crc16received)
+                            self.message = f"Success / Receiver / Section.End / Receive complete / {self.header.data_type} / [receive: 0x{self.crc16received:04X}]"
                             return self.state
                         else:
                             return self._raise_error(str(Section.End), "CRC Error", str(self.header.data_type), f"[receive: 0x{self.crc16received:04X}, calculate: 0x{self.crc16calculated:04X}]")
