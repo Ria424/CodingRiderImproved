@@ -1,8 +1,9 @@
+from collections.abc import Callable
 from queue import Queue
 from struct import pack
 from threading import Thread
 from time import perf_counter, sleep, time
-from typing import Any, Callable, Literal
+from typing import Any, Literal
 
 from colorama import Back, Fore, Style
 from colorama import init as colorama_init
