@@ -20,22 +20,22 @@ def bytearray_to_string(data_array: bytes | bytearray) -> str:
 
 class Drone:
     __slots__ = (
-        "_serialport",
-        "_buffer_queue",
         "_buffer_handler",
-        "_thread",
-        "_flag_thread_run",
-        "_receiver",
+        "_buffer_queue",
+        "_event_handler",
         "_flag_check_background",
         "_flag_show_error_message",
         "_flag_show_log_message",
-        "_flag_show_transfer_data",
         "_flag_show_receive_data",
-        "_event_handler",
-        "_storage_header",
+        "_flag_show_transfer_data",
+        "_flag_thread_run",
+        "_parser",
+        "_receiver",
+        "_serialport",
         "_storage",
         "_storage_count",
-        "_parser",
+        "_storage_header",
+        "_thread",
         "initialized_time",
     )
 
@@ -208,7 +208,7 @@ class Drone:
             state_loading = self._receiver.call(self._buffer_handler.pop(0))
 
             # 오류 출력
-            if state_loading == StateLoading.Failure:
+            if state_loading == StateLoading.FAILURE:
                 # 수신 데이터 출력(줄넘김)
                 self._print_receive_data_end()
 
@@ -216,14 +216,14 @@ class Drone:
                 self._print_error(self._receiver.message)
 
             # 로그 출력
-            if state_loading == StateLoading.Loaded:
+            if state_loading == StateLoading.LOADED:
                 # 수신 데이터 출력(줄넘김)
                 self._print_receive_data_end()
 
                 # 로그 출력
                 self._print_log(self._receiver.message)
 
-            if self._receiver.state == StateLoading.Loaded:
+            if self._receiver.state == StateLoading.LOADED:
                 self._handler(self._receiver.header, self._receiver.data)
                 return self._receiver.header.data_type
 
@@ -244,7 +244,7 @@ class Drone:
     #         state_loading = self._receiver.call(self._buffer_handler.pop(0))
 
     #         # 오류 출력
-    #         if state_loading == StateLoading.Failure:
+    #         if state_loading == StateLoading.FAILURE:
     #             # 수신 데이터 출력(줄넘김)
     #             self._print_receive_data_end()
 
@@ -252,14 +252,14 @@ class Drone:
     #             self._print_error(self._receiver.message)
 
     #         # 로그 출력
-    #         if state_loading == StateLoading.Loaded:
+    #         if state_loading == StateLoading.LOADED:
     #             # 수신 데이터 출력(줄넘김)
     #             self._print_receive_data_end()
 
     #             # 로그 출력
     #             self._print_log(self._receiver.message)
 
-    #         if self._receiver.state == StateLoading.Loaded:
+    #         if self._receiver.state == StateLoading.LOADED:
     #             self._handler(self._receiver.header, self._receiver.data)
     #             return self._receiver.header, self._receiver.data
 
